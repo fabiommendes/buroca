@@ -1,6 +1,5 @@
 import subprocess
 
-
 LETTERS = list('abcdefghijklmnopqrstuvwxyz')
 for _letter in 'abcd':
     LETTERS.extend(_letter + c for c in 'abcdefghijklmnopqrstuvwxyz')
@@ -10,7 +9,7 @@ class Sheet:
     """
     Represents a spreadsheet running in a LOCalc instance.
     """
-    
+
     def __init__(self, file):
         self.file = file
         self.process = None
@@ -27,7 +26,8 @@ class Sheet:
         "Start calc process"
         cmd = [
             'libreoffice', '--calc',
-            '--accept="socket,host=localhost,port=2002;urp;StarOffice.ServiceManager"',
+            '--accept="socket,host=localhost,port=2002;urp;'
+            'StarOffice.ServiceManager"',
             self.file,
         ]
         self.process = subprocess.Popen(cmd)
@@ -36,7 +36,7 @@ class Sheet:
     def sheet(self):
         """
         Return an object representing the spreadsheet.
-        
+
         Must start libreoffice process first.
         """
         if self.process is None:
@@ -49,20 +49,18 @@ class Sheet:
         """
         Search all cells for jinja2 templates
         """
-        S = self.sheet()
-        ROWS = 57
-        COLS = LETTERS.index('m')
+        sheet = self.sheet()
+        rows = 57
+        cols = LETTERS.index('m')
         cell_map = {}
-        empty_cols = 0
-        empty_rows = 0
 
-        for i in range(ROWS):
-            for j in range(COLS):
+        for i in range(rows):
+            for j in range(cols):
                 cell_name = cell(i, j)
-                data = S(cell_name).string.strip()
+                data = sheet(cell_name).string.strip()
                 if data.startswith('{') and data.endswith('}'):
                     cell_map[cell_name] = data
-            
+
         return cell_map
 
 

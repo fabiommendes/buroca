@@ -1,5 +1,5 @@
-import os
 import glob
+import os
 import pathlib
 from contextlib import contextmanager
 
@@ -40,7 +40,7 @@ def workdir(path):
     """
     Change cwd to path inside an with block.
 
-    >>> with workdir('some_path'):                             # doctest: + SKIP
+    >>> with workdir('some_path'):                            # doctest: + SKIP
     ...     do_something()
     """
     old_path = os.getcwd()
