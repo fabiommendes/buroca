@@ -90,13 +90,13 @@ Consider a ``templates/resumee.md`` file:
 
 Now that we have a template, we can generate files from YAML data::
 
-    $ buroca do resumee.md person/john
+    $ buroca create templates/resumee.md --for john
 
-This will create a resume-john.md file under "reports/" that inserts all 
+This will create a resumee-john.md file under "reports/" that inserts all
 information in the YAML files into the correct places. If we want to generate 
 files for all members at once, just type::
 
-    $ buroca do resumee.md person/*
+    $ buroca create templates/resumee.md
 
 It will scan all files like ``data/person/*.yml`` and create a report for each 
 person. 
@@ -109,7 +109,11 @@ input files to pdf. This is particularly useful to aggregate reports for differe
 entities into a single file. This is useful, for instance, when you want to send
 files for printing::
 
-    $ buroca do resumee.md person/* -t pdf --single
+    $ buroca join-pdf resume-*.md resume.pdf
+
+We could also export to pdf during document generation:: 
+
+    $ buroca do resumee.md person/* --pdf-join
 
 
 What about this name?

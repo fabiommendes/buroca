@@ -3,8 +3,9 @@ Load and locate YAML resources from the /data/ folder of a project.
 """
 
 import os
-from types import SimpleNamespace
 from functools import lru_cache
+from pathlib import Path
+from types import SimpleNamespace
 
 import yaml
 
@@ -12,17 +13,17 @@ import yaml
 #
 # Load YAML resources.
 #
-def load_resources(base, name, as_namespace=False):
+def load_for(for_, as_namespace=True, base=None):
     """
-    Load all resources on the given path.
+    Load all resources for the given entity.
 
     Args:
+        for_ (str):
+            Name of the selected entity. It will scan this resource on all
+            sub-folders and associate the folder name with folder/<name>.yml in
+            the resulting namespace.
         base (str):
-            Project directory. Must contain a /data/ folder with yaml files. 
-        name (str):
-            Name of the required resource. It will scan this resource on all
-            sub-folders and associate the folder name with folder/<name>.yml
-            in the resulting namespace.
+            Project directory. Must contain a /data/ folder with yaml files.
         as_namespace (bool):
             If True, return each resource as a SimpleNamespace instance instead
             of a a dictionary.
@@ -31,22 +32,18 @@ def load_resources(base, name, as_namespace=False):
         A dictionary mapping resource names to values.
     """
 
-    datadir = os.path.join(base, 'data')
-    paths = os.listdir(datadir)
+    base = (Path(base or '.')).absolute()
+    datadir = base / 'data'
     ns = {}
 
-    for path in paths:
-        fullpath = os.path.join(datadir, path)
-
+    for path in datadir.iterdir():
         if is_resource(path):
-            ns[path[:-4]] = load_yaml(fullpath)
-
-        elif os.path.isdir(fullpath):
-            resource_path = os.path.join(fullpath, name) + '.yml'
-            resource_name = os.path.split(fullpath)[-1]
-            data = (load_yaml(resource_path)
-                    if os.path.exists(resource_path) else None)
-            ns[resource_name] = data
+            name = path.parts[-1].rpartition('.')[0]
+            ns[name] = load_yaml(path)
+        elif path.is_dir():
+            name = path.parts[-1]
+            path = path / (for_ + '.yml')
+            ns[name] = load_yaml(path) if path.exists() else None
 
     if as_namespace:
         for name, value in ns.items():
@@ -55,7 +52,7 @@ def load_resources(base, name, as_namespace=False):
     return ns
 
 
-def find_resources(base, path_from=None, as_namespace=False):
+def find_resources(base, path_from=None, as_namespace=True):
     """
     Return a mapping of entity to namespace using the given path as reference
     to locate entity values.
@@ -65,7 +62,7 @@ def find_resources(base, path_from=None, as_namespace=False):
     resource_path = os.path.join(base, 'data', path_from)
     files = os.listdir(resource_path)
     names = [f[:-4] for f in files if is_resource(f)]
-    return {name: load_resources(base, name, as_namespace) for name in names}
+    return {name: load_for(name, as_namespace, base) for name in names}
 
 
 def locate_entities(base):
@@ -97,7 +94,7 @@ def locate_entities(base):
             else:
                 msg = 'inconsistent resources: %s and %s'
                 raise TypeError(msg % (resource_path, path))
-        
+
         return resource_path
 
 
@@ -109,4 +106,4 @@ def load_yaml(path):
 
 def is_resource(file):
     "Return True if file extension indicates it is a db resource."
-    return file.endswith('.yml')
+    return str(file).endswith('.yml')

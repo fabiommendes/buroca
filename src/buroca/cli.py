@@ -1,6 +1,12 @@
-import click
 import os
-from . import db, sheets, templates 
+import pathlib
+import tempfile
+
+import click
+
+from .convert import convert_file, get_format
+from .paths import name_for, as_report_path, init as path_init
+from .templates import save_rendered_for
 
 
 @click.group(name='buroca')
@@ -10,53 +16,50 @@ def buroca():
 
 @buroca.command()
 def init():
-    "create initial paths."
-
-    abspath = (lambda x: os.path.join(curr_path, x))
-    curr_path = os.getcwd()
-
-    for path in ['data', 'reports', 'templates']:
-        path_ = abspath(path)
-        if not os.path.exists(path_):
-            click.echo('creating %r...' % path)
-            os.mkdir(path_)
-
-    click.echo('Paths successfully created!')
+    """
+    create initial paths.
+    """
+    path_init(os.getcwd())
 
 
 @buroca.command()
 @click.argument('template')
-@click.argument('resource')
-def do(template, resource):
-    "create reports from resources and templates."
+@click.option('--for', help='select an entity to generate templates to')
+@click.option('--type', '-t', help='output format type')
+def create(template, type, **kwargs):
+    """
+    create reports from resources and templates.
+    """
 
-    template_base, template_ext = os.path.splitext(template)
+    for_ = kwargs.get('for')
+    template = normalize_template_path(template)
 
-    # Grab template
-    template_path = project_path('templates', template)
-    if not os.path.exists(template_path):
-        raise SystemExit('template does not exist: %s' % template)
-    
-    jinja_template = templates.load_template(template_path)
-    
-    # Load resources
-    if resource.endswith('/*'):
-        resources = db.find_resources(project_path(), resource[:-2], True)
+    if for_ is not None:
+        path = template.absolute()
+        ext = os.path.splitext(path)[-1]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = name_for(as_report_path(path), for_, type)
+            if type:
+                tmp = pathlib.Path(tmp) / ('temp' + ext)
+                save_rendered_for(path, tmp, for_)
+                convert_file(tmp, dest, infmt=get_format(path))
+            else:
+                save_rendered_for(path, dest, for_)
+
     else:
-        resource_name, entity = resource.split('/')
-        resources = {entity: db.load_resources(project_path(), entity, True)}
-    
-    # Apply template
-    for entity, ns in resources.items():
-        data = jinja_template.render(ns)
-        fname = '%s-%s%s' % (template_base, entity, template_ext)
-        
-        with open(project_path('reports', fname), 'w') as F:
-            F.write(data)
-            click.echo('Report: reports/%s.' % fname)
+        raise NotImplementedError
 
 
-def project_path(*args):
-    "Return a subpath into the project's tree"
+def normalize_template_path(template):
+    """
+    Checks if template path is valid and normalize it to a valid Path object.
+    """
 
-    return os.path.join(os.getcwd(), *args)
+    if '/' not in template:
+        template = 'templates/' + template
+
+    path = pathlib.Path(template)
+    if not path.exists():
+        raise SystemExit('template does not exist at: %s' % template)
+    return path
