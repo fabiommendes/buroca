@@ -1,6 +1,6 @@
 class BurocaException(Exception):
     """
-    Buroca errors.
+    Base class for all Buroca errors.
     """
 
 

@@ -70,3 +70,19 @@ def as_report_path(path):
         raise ValueError('invalid template path: %s' % path)
     parts[-2] = 'reports'
     return pathlib.Path(*parts)
+
+
+def normalize_path(template, required='templates/', glob=False):
+    """
+    Checks if template path is valid and normalize it to a valid Path object.
+    """
+
+    if '/' not in template:
+        template = required + template
+    elif not template.startswith(required):
+        raise SystemExit('path should start with %s' % required)
+
+    path = pathlib.Path(template)
+    if not glob and not path.exists():
+        raise SystemExit('not found: %s' % template)
+    return path

@@ -53,13 +53,15 @@ def save_rendered_all(template_path, dest=None, type=None, base=None):
     reports_path = as_report_path(template_path)
 
     if dest is None:
-        dest = (lambda x: name_for(reports_path, x))
+        dest = (lambda x: name_for(reports_path, x, type))
 
     if ext in ['.ods', '.odt']:
         raise NotImplementedError
     else:
         template = load_jinja_template(template_path)
-        for name, namespace in namespaces.items():
+        n_items = len(namespaces)
+        for idx, (name, namespace) in enumerate(namespaces.items(), 1):
+            print('(%s/%s) creating document for "%s".' % (idx, n_items, name))
             save_rendered_template(template, namespace, dest(name), type=type)
 
 

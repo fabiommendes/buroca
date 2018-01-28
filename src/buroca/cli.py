@@ -1,9 +1,11 @@
 import os
-import pathlib
+from glob import glob as expand_glob
 
 import click
 
+from .convert import join_pdfs
 from .paths import name_for, as_report_path, init as path_init
+from .paths import normalize_path
 from .templates import save_rendered_for, save_rendered_all
 from .viewers import launch_document_viewer
 
@@ -13,6 +15,9 @@ def buroca():
     "A small utility for automatic generation of paperwork."
 
 
+#
+# Initialize a buroca project: buroca init
+#
 @buroca.command()
 def init():
     """
@@ -21,6 +26,9 @@ def init():
     path_init(os.getcwd())
 
 
+#
+# Create files: buroca create <template> [...]
+#
 @buroca.command()
 @click.argument('template')
 @click.option('--for', help='select an entity to generate templates to')
@@ -31,9 +39,8 @@ def create(template, type, view=False, **kwargs):
     """
     create reports from resources and templates.
     """
-
     for_ = kwargs.get('for')
-    template = normalize_template_path(template)
+    template = normalize_path(template, 'templates/')
 
     if for_ is not None:
         create_for(for_, template, type, view)
@@ -63,15 +70,21 @@ def create_sequence(template, type):
     save_rendered_all(template_path, type=type)
 
 
-def normalize_template_path(template):
+#
+# Join pdfs: buroca join-pdf [...]
+#
+@buroca.command('join-pdf')
+@click.argument('glob')
+@click.option('--view', '-v', is_flag=True,
+              help='launch document viewer afterwards')
+def join_pdf(glob, view):
     """
-    Checks if template path is valid and normalize it to a valid Path object.
+    join pdfs from generated reports.
     """
-
-    if '/' not in template:
-        template = 'templates/' + template
-
-    path = pathlib.Path(template)
-    if not path.exists():
-        raise SystemExit('template does not exist at: %s' % template)
-    return path
+    glob = str(normalize_path(glob, 'reports/', glob=True))
+    out_path = glob + '.pdf'
+    glob += '-*.pdf'
+    files = expand_glob(glob)
+    join_pdfs(files, out_path)
+    if view:
+        launch_document_viewer(out_path)

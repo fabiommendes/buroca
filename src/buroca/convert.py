@@ -35,6 +35,13 @@ def convert_file(src, dest, infmt=None, outfmt=None):
         raise RuntimeError(msg)
 
 
+def join_pdfs(files, dest):
+    """
+    Join all input PDF files and save it on the given destination.
+    """
+    _cli('pdfjam', '-o', str(dest), '--', *map(str, files))
+
+
 def get_format(path, fmt=None):
     """
     Return type from path extension.

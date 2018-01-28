@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from buroca.errors import SkipViewer
+from .errors import SkipViewer
 
 
 def launch_document_viewer(file):
