@@ -1,4 +1,7 @@
+import pathlib
 import subprocess
+import tempfile
+from contextlib import contextmanager
 
 from pyexcel_ods3 import get_data as _get_excel_data
 
@@ -74,6 +77,16 @@ def read_ods(path):
         data, = data.values()
         return data
     return data
+
+
+@contextmanager
+def intermediate_conversion(file_name):
+    """
+    Realize a intermediate conversion to a file located into a temporary
+    path with the given filename.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        yield pathlib.Path(tmp_dir) / file_name
 
 
 #

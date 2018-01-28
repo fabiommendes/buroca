@@ -8,7 +8,7 @@ MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT',
 
 
 @register
-def cronogram(type, duration, start, month, tick_mark='x'):
+def cronogram(type, duration, start, month, tick_mark=None):
     """
     Make a cronogram table in the desired format.
 
@@ -17,12 +17,18 @@ def cronogram(type, duration, start, month, tick_mark='x'):
     All other arguments are identical to :func:`make_cronogram_table`.
     """
 
+    if tick_mark is None:
+        if type in ('md', 'md-pipe', 'markdown', 'markdown-pipe'):
+            tick_mark = 'X'
+        else:
+            tick_mark = 'X'
+
     table = make_cronogram_table(duration, start, month, tick_mark)
 
     if type in ('md', 'markdown'):
-        result = render_markdown_simple_table(table)
+        result = render_markdown_table(table)
     elif type in ('md-pipe', 'markdown-pipe'):
-        result = render_markdown_pipe_table(table)
+        result = render_markdown_table(table, colsep='|')
     else:
         raise NotImplementedError
 
@@ -56,7 +62,7 @@ def make_cronogram_table(duration, start, first_month, tick_mark='x'):
 
     # Save months at header
     header = table[0]
-    header.append('#')
+    header.append('\#')
     header.extend(month for month, _ in zip(months, range(end)))
 
     # Save body
@@ -72,25 +78,39 @@ def make_cronogram_table(duration, start, first_month, tick_mark='x'):
     return table
 
 
-def render_markdown_simple_table(table, min_width=3):
-    nrows = len(table)
-    ncols = len(table[0])
+def render_markdown_table(table, min_width=3, wrap='\n{}\n', colsep='    '):
+    """
+    Render table to markdown.
 
-    colsizes = [max(max(len(table[i][j]) for i in range(nrows)), min_width)
-                for j in range(ncols)]
+    Args:
+        table:
+            A list of lists with each cell content.
+        min_width (int):
+            Minimum width of each cell.
+        wrap (str):
+            A format string that is used to wrap the table contents usually to
+            insert newlines before and after table data.
+        colsep (str):
+            The column separator. Use colsep='|' for pipe tables and 
+            colsep='   ' for standard markdown tables.
+    """
+
+    # table geometry
+    n_rows = len(table)
+    n_cols = len(table[0])
+    colsizes = [
+        max(max(len(table[i][j]) for i in range(n_rows)), min_width)
+        for j in range(n_cols)
+    ]
+
+    # Insert row with line geometry
     header, *body = table
     data = [header, ['-' * size for size in colsizes]]
     data.extend(body)
 
-    return '\n%s\n' % (
-        '\n'.join('   '.join(cell.ljust(size)
-                             for cell, size in zip(row, colsizes))
-                  for row in data))
+    # Justify cells according to column size
+    for idx, row in enumerate(data):
+        row = [cell.ljust(size) for cell, size in zip(row, colsizes)]
+        data[idx] = colsep.join(row)
 
-
-def render_markdown_pipe_table(table):
-    header, *body = table
-    data = [header, ['-' * min(len(cell), 3) for cell in header]]
-    data.extend(body)
-    return '\n%s\n' % ('\n'.join('|'.join(cell or ' ' for cell in row)
-                                 for row in data))
+    return wrap.format('\n'.join(data))

@@ -1,12 +1,11 @@
 import os
 import pathlib
-import tempfile
 
 import click
 
-from .convert import convert_file, get_format
 from .paths import name_for, as_report_path, init as path_init
-from .templates import save_rendered_for
+from .templates import save_rendered_for, save_rendered_all
+from .viewers import launch_document_viewer
 
 
 @click.group(name='buroca')
@@ -26,7 +25,9 @@ def init():
 @click.argument('template')
 @click.option('--for', help='select an entity to generate templates to')
 @click.option('--type', '-t', help='output format type')
-def create(template, type, **kwargs):
+@click.option('--view', '-v', is_flag=True,
+              help='launch document viewer afterwards')
+def create(template, type, view=False, **kwargs):
     """
     create reports from resources and templates.
     """
@@ -35,20 +36,31 @@ def create(template, type, **kwargs):
     template = normalize_template_path(template)
 
     if for_ is not None:
-        path = template.absolute()
-        ext = os.path.splitext(path)[-1]
-
-        with tempfile.TemporaryDirectory() as tmp:
-            dest = name_for(as_report_path(path), for_, type)
-            if type:
-                tmp = pathlib.Path(tmp) / ('temp' + ext)
-                save_rendered_for(path, tmp, for_)
-                convert_file(tmp, dest, infmt=get_format(path))
-            else:
-                save_rendered_for(path, dest, for_)
-
+        create_for(for_, template, type, view)
     else:
-        raise NotImplementedError
+        if view:
+            msg = 'Cannot open viewer when generating multiple files.'
+            raise SystemExit(msg)
+        create_sequence(template, type)
+
+
+def create_for(for_, template, type, view):
+    """
+    Implements the "buroca create" command with a --for option.
+    """
+    template_path = template.absolute()
+    dest = name_for(as_report_path(template_path), for_, type)
+    save_rendered_for(template_path, dest, for_, type=type)
+    if view:
+        launch_document_viewer(dest)
+
+
+def create_sequence(template, type):
+    """
+    Generate multiple files for the "buroca create" command.
+    """
+    template_path = template.absolute()
+    save_rendered_all(template_path, type=type)
 
 
 def normalize_template_path(template):

@@ -52,17 +52,26 @@ def load_for(for_, as_namespace=True, base=None):
     return ns
 
 
-def find_resources(base, path_from=None, as_namespace=True):
+def load_all(reference=None, as_namespace=True, base=None):
     """
-    Return a mapping of entity to namespace using the given path as reference
+    Return a mapping of each entity to namespace using the given path as reference
     to locate entity values.
     """
+    base = (Path(base or '.')).absolute()
 
-    path_from = path_from or locate_entities(base)
-    resource_path = os.path.join(base, 'data', path_from)
-    files = os.listdir(resource_path)
-    names = [f[:-4] for f in files if is_resource(f)]
-    return {name: load_for(name, as_namespace, base) for name in names}
+    # Choose the correct reference
+    if reference is None:
+        reference = locate_entities(base)
+    elif isinstance(reference, str):
+        pass
+
+    resource_path = base / 'data' / reference
+    result = {}
+    for subpath in resource_path.iterdir():
+        if is_resource(subpath):
+            name = subpath.parts[-1].rpartition('.')[0]
+            result[name] = load_for(name, as_namespace, base)
+    return result
 
 
 def locate_entities(base):
