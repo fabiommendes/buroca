@@ -5,12 +5,14 @@ from contextlib import contextmanager
 
 from pyexcel_ods3 import get_data as _get_excel_data
 
-PANDOC_PAIRS = {
-    ('markdown', 'latex'),
-    ('markdown', 'pdf'),
-}
+UNIVERSAL_FORMATS = [
+    'markdown', 'latex', 'html', 'pdf',
+]
+PANDOC_PAIRS = {(x, y) for x in UNIVERSAL_FORMATS for y in UNIVERSAL_FORMATS}
 FMT_ALIASES = {
     'md': 'markdown',
+    'tex': 'latex',
+    'htm': 'html',
 }
 
 

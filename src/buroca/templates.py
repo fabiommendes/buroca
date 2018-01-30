@@ -1,4 +1,5 @@
 import os
+import pathlib
 from functools import singledispatch
 from pathlib import Path
 
@@ -86,6 +87,11 @@ def save_rendered_template(template, namespace, dest, type=None):
             save_rendered_template(template, namespace, tmp)
             convert_file(tmp, dest)
     else:
+        # Ensure parent directory exists
+        dest = pathlib.Path(dest)
+        dest_dir = pathlib.Path(*dest.parts[:-1])
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
         render_template_at(template, namespace, dest)
 
 

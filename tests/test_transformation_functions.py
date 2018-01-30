@@ -4,7 +4,6 @@ from buroca.global_functions import render_markdown_table, make_chronogram_table
 class TestGlobalFunctions:
     def test_render_markdown_table(self):
         data = [['name', 'age'], ['john lennon', '42']]
-        print(render_markdown_table(data))
         assert render_markdown_table(data) == (
             'name          age\n'
             '-----------   ---\n'

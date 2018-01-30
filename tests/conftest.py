@@ -1,8 +1,10 @@
 import os
 import pathlib
+import sys
 import tempfile
 from contextlib import contextmanager
 
+import mock
 import pytest
 
 SIMPLE_BEATLES_DATA = {
@@ -36,6 +38,25 @@ def tree():
     return tree_maker
 
 
+@pytest.yield_fixture
+def simple_example():
+    """
+    Simple example inspired on the readme
+    """
+    with tree_maker(SIMPLE_BEATLES_DATA) as tmp:
+        yield tmp
+
+
+@pytest.yield_fixture
+def no_sys_exit():
+    exit_function = (lambda *args: None)
+    with mock.patch('sys.exit', exit_function):
+        yield exit_function
+
+
+#
+# Auxiliary functions
+#
 @contextmanager
 def tree_maker(data):
     old_dir = os.getcwd()
@@ -59,10 +80,9 @@ def tree_maker(data):
             os.chdir(old_dir)
 
 
-@pytest.yield_fixture
-def simple_example():
+def get_data(path):
     """
-    Simple example inspired on the readme
+    Return data of file on the given path as a string.
     """
-    with tree_maker(SIMPLE_BEATLES_DATA) as tmp:
-        yield tmp
+    with open(path) as F:
+        return F.read()

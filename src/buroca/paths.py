@@ -52,12 +52,15 @@ def workdir(path):
         os.chdir(old_path)
 
 
-def name_for(template, for_, ext=None):
+def name_for(template, for_, type=None):
     """
     Convert "template.ext" to "template-for.ext".
     """
     base, new_ext = os.path.splitext(template)
-    ext = ext or new_ext.lstrip('.')
+    if type is None:
+        ext = new_ext.lstrip('.')
+    else:
+        ext = EXT_ALIASES.get(type, type)
     return pathlib.Path('%s-%s.%s' % (base, for_, ext))
 
 
@@ -86,3 +89,9 @@ def normalize_path(template, required='templates/', glob=False):
     if not glob and not path.exists():
         raise SystemExit('not found: %s' % template)
     return path
+
+
+EXT_ALIASES = {
+    'markdown': 'md',
+    'latex': 'tex',
+}
