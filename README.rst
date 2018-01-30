@@ -40,12 +40,17 @@ It will create the following folder structure in the current directory::
     reports/
     templates/
 
-Data must contain a set of YAML files that encode information about each entity
+The data folder must contain YAML files that encode information about each entity
 in your project. You can create arbitrary YAML files representing people, 
 inventory, reports or anything you want.
 
-A fairly common usage is to include a person/ sub-folder with one file per 
-person::
+YAML files that are directly under the data folder are considered global, and
+will be available to all templates. If the file sits under another sub-folder,
+it will be treated as a unique entity and a single output will be generated for
+each input.
+
+A fairly common usage is to include a person/ sub-folder with one file per
+person associated with your project::
 
     data/
      |- band.yml           -- generic project information
@@ -57,7 +62,7 @@ person::
 
 The content of those files is arbitrary, as long as they encode dictionaries:
 
-.. code-block:: YAML
+.. code-block:: yaml
 
     # john.yml
     name: John Winston Lennon
@@ -92,28 +97,31 @@ Now that we have a template, we can generate files from YAML data::
 
     $ buroca create templates/resumee.md --for john
 
-This will create a resumee-john.md file under "reports/" that inserts all
-information in the YAML files into the correct places. If we want to generate 
-files for all members at once, just type::
+This will create the file "reports/resumee-john.md" that inserts information
+for each YAML file (associated person with "data/person/john.yml") into the
+correct places. If we want to generate files for all members at once, just type::
 
-    $ buroca create templates/resumee.md
+    $ buroca create resumee.md
 
 It will scan all files like ``data/person/*.yml`` and create a report for each 
-person. 
+person.
+
 
 Export to PDF
 -------------
 
 Buroca integrates with `pandoc <http://pandoc.org>` and can convert several
-input files to pdf. This is particularly useful to aggregate reports for different
-entities into a single file. This is useful, for instance, when you want to send
-files for printing::
+input files to pdf. If you have `pdfjam <http://go.warwick.ac.uk/pdfjam>` in
+your machine, it can also join different PDF files into a single output. This
+is particularly useful to aggregate reports for different entities into a single
+file for printing::
 
-    $ buroca join-pdf resume-*.md resume.pdf
+    $ buroca create resumee -t pdf
+    $ buroca join-pdf resumee
 
-We could also export to pdf during document generation:: 
+We could also have created a single report during document creation::
 
-    $ buroca do resumee.md person/* --pdf-join
+    $ buroca create resumee --single
 
 
 What about this name?

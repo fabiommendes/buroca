@@ -39,7 +39,7 @@ def join_pdfs(files, dest):
     """
     Join all input PDF files and save it on the given destination.
     """
-    _cli('pdfjam', '-o', str(dest), '--', *map(str, files))
+    _cli('pdfjam', '-q', '-o', str(dest), '--', *map(str, files))
 
 
 def get_format(path, fmt=None):

@@ -3,17 +3,23 @@ Load and locate YAML resources from the /data/ folder of a project.
 """
 
 import os
+from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
-from types import SimpleNamespace
 
-import yaml
+TYPE_PRIORITY = [
+    # Collection formats
+    'pickle', 'csv', 'xlsx', 'xls', 'html', 'xml', 'sqlite', 'ini',
+
+    # Individual formats
+    'yml', 'json',
+]
 
 
 #
 # Load YAML resources.
 #
-def load_for(for_, as_namespace=True, base=None):
+def load_for(for_, base=None):
     """
     Load all resources for the given entity.
 
@@ -24,35 +30,67 @@ def load_for(for_, as_namespace=True, base=None):
             the resulting namespace.
         base (str):
             Project directory. Must contain a /data/ folder with yaml files.
-        as_namespace (bool):
-            If True, return each resource as a SimpleNamespace instance instead
-            of a a dictionary.
 
     Return:
         A dictionary mapping resource names to values.
     """
 
+    get_name = (lambda x: os.path.splitext(x.parts[-1])[0])
     base = (Path(base or '.')).absolute()
     datadir = base / 'data'
-    ns = {}
 
+    # Collect names
+    names = defaultdict(list)
     for path in datadir.iterdir():
-        if is_resource(path):
-            name = path.parts[-1].rpartition('.')[0]
-            ns[name] = load_yaml(path)
-        elif path.is_dir():
-            name = path.parts[-1]
-            path = path / (for_ + '.yml')
-            ns[name] = load_yaml(path) if path.exists() else None
+        names[get_name(path)].append(path)
 
-    if as_namespace:
-        for name, value in ns.items():
-            if isinstance(name, dict):
-                ns[name] = SimpleNamespace(**value)
+    # Create namespace
+    ns = {name: resource(paths, for_) for name, paths in names.items()}
     return ns
 
 
-def load_all(reference=None, as_namespace=True, base=None):
+def path_priority(path):
+    """
+    Return the priority number for files of the given path.
+    Highest numbers are chosen first.
+    """
+    ext = os.path.splitext(path)[-1].lstrip('.')
+    n = len(TYPE_PRIORITY)
+    try:
+        return n - TYPE_PRIORITY.index(ext)
+    except ValueError:
+        return 0
+
+
+def resource(paths, for_):
+    """
+    Return the resource corresponding to the given group of paths.
+
+    * Files have preference over directories
+    * Priority is defined by extension in the order of TYPE_PRIORITY
+    """
+    if len(paths) == 0:
+        return None
+    elif len(paths) == 1:
+        return resource_from_path(paths[0], for_)
+    else:
+        return resource_from_path(sorted(paths, key=path_priority)[0], for_)
+
+
+def resource_from_path(path, for_):
+    """
+    Fetch resource for the given entity in the specified path.
+    """
+    ext = os.path.splitext(path)[-1].lstrip('.')
+
+    if path.is_dir():
+        path = path / (for_ + '.yml')
+        return load_yaml(path) if path.exists() else None
+    elif ext == 'yml':
+        return load_yaml(path)
+
+
+def load_all(reference=None, base=None):
     """
     Return a mapping of each entity to namespace using the given path as reference
     to locate entity values.
@@ -70,7 +108,7 @@ def load_all(reference=None, as_namespace=True, base=None):
     for subpath in resource_path.iterdir():
         if is_resource(subpath):
             name = subpath.parts[-1].rpartition('.')[0]
-            result[name] = load_for(name, as_namespace, base)
+            result[name] = load_for(name, base)
     return result
 
 
@@ -107,10 +145,37 @@ def locate_entities(base):
         return resource_path
 
 
+#
+# File loaders
+#
+LOADER_MAP = {}
+
+
+def single_loader(ext):
+    """
+    Register function as a loader for the given file extension.
+    """
+
+    def decorator(func):
+        LOADER_MAP[ext] = func
+        return func
+
+    return decorator
+
+
+@single_loader('yaml')
+@single_loader('yml')
 @lru_cache(1024)
 def load_yaml(path):
-    "Load YAML and return as a simple namespace"
+    import yaml
     return yaml.safe_load(open(path))
+
+
+@single_loader('json')
+@lru_cache(1024)
+def load_json(path):
+    import json
+    return json.load(open(path))
 
 
 def is_resource(file):

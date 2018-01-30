@@ -23,27 +23,26 @@ def cronogram(type, duration, start, month, tick_mark=None):
         else:
             tick_mark = 'X'
 
-    table = make_cronogram_table(duration, start, month, tick_mark)
+    table = make_chronogram_table(zip(duration, start), month, tick_mark)
 
     if type in ('md', 'markdown'):
-        result = render_markdown_table(table)
+        result = '\n%s\n\n' % render_markdown_table(table)
     elif type in ('md-pipe', 'markdown-pipe'):
-        result = render_markdown_table(table, colsep='|')
+        result = '\n%s\n\n' % render_markdown_table(table, colsep='|')
     else:
         raise NotImplementedError
 
     return result
 
 
-def make_cronogram_table(duration, start, first_month, tick_mark='x'):
+def make_chronogram_table(slots, first_month=1, tick_mark='x'):
     """
     Make a cronogram table.
 
     Args:
-        duration:
-            A list of durations for each phase.
-        start:
-            A list of offsets for each phase. (0 to start at the first month)
+        slots:
+            A list of (duration, offset) tuples specifing the duration and
+            the offset values for each phase.
         first_month (int):
             Starting month. 1 - January, 2 - February, etc.
         tick_mark:
@@ -52,7 +51,9 @@ def make_cronogram_table(duration, start, first_month, tick_mark='x'):
     Returns:
         A list of lists with the table content.
     """
-    duration, start = list(duration), list(start)
+    data = list(slots)
+    duration = [x for x, _ in data]
+    start = [y for _, y in data]
     end = max(x + y for x, y in zip(duration, start))
     months = itertools.cycle(MONTHS)
     for _ in range(first_month - 1):
@@ -78,7 +79,7 @@ def make_cronogram_table(duration, start, first_month, tick_mark='x'):
     return table
 
 
-def render_markdown_table(table, min_width=3, wrap='\n{}\n', colsep='    '):
+def render_markdown_table(table, min_width=3, colsep='   '):
     """
     Render table to markdown.
 
@@ -113,4 +114,4 @@ def render_markdown_table(table, min_width=3, wrap='\n{}\n', colsep='    '):
         row = [cell.ljust(size) for cell, size in zip(row, colsizes)]
         data[idx] = colsep.join(row)
 
-    return wrap.format('\n'.join(data))
+    return '\n'.join(data)

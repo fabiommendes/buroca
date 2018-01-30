@@ -1,4 +1,5 @@
 import os
+from functools import singledispatch
 from pathlib import Path
 
 import jinja2
@@ -76,6 +77,8 @@ def save_rendered_template(template, namespace, dest, type=None):
             A namespace mapping to be passed to the Jinja template.
         dest:
             The destination file for the resulting file.
+        type:
+            If given, converts the result to the given output type.
     """
     if type is not None:
         tmp_name = template.path.parts[-1]
@@ -83,14 +86,30 @@ def save_rendered_template(template, namespace, dest, type=None):
             save_rendered_template(template, namespace, tmp)
             convert_file(tmp, dest)
     else:
-        try:
-            data = template.render(namespace)
-        except Exception as ex:
-            msg = 'Error when rendering %r (%s): %s'
-            msg = msg % (dest, type(ex).__name__, ex)
-            raise TemplateError(msg)
-        with open(dest, 'w') as F:
-            F.write(data)
+        render_template_at(template, namespace, dest)
+
+
+@singledispatch
+def render_template_at(template, namespace, dest):
+    try:
+        renderer = template.render_at
+    except AttributeError:
+        template_type = type(template).__name__
+        raise TypeError('unsupported template type: %s' % template_type)
+    else:
+        renderer(namespace, dest)
+
+
+@render_template_at.register(jinja2.Template)
+def _(template, namespace, dest):
+    try:
+        data = template.render(namespace)
+    except Exception as ex:
+        msg = 'Error when rendering %r (%s): %s'
+        msg = msg % (dest, type(ex).__name__, ex)
+        raise TemplateError(msg)
+    with open(dest, 'w') as F:
+        F.write(data)
 
 
 def load_jinja_template(path):

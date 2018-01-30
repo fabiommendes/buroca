@@ -49,11 +49,9 @@ class DocTemplate:
 
         return ET.tounicode(xml_root)
 
-    def save_rendered(self, namespace, dest):
+    def render_at(self, namespace, dest):
         """
-        Override data on content.xml with the supplied user data.
-
-        File is closed after operation.
+        Render template and save result on the given destination.
         """
         self._check_open()
         data = self.render_template(namespace)
@@ -115,7 +113,7 @@ def render_open_doc_template(template, dest, data):
         Nothing
     """
     doc_template = DocTemplate(template)
-    doc_template.save_rendered(data, dest)
+    doc_template.render_at(data, dest)
 
 
 def render_node(node, namespace):

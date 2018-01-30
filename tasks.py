@@ -9,6 +9,6 @@ def bump_version(ctx, part='patch'):
 
     if part not in {'patch', 'major', 'minor'}:
         msg = 'invalid part: %r. Must be either patch, major or minor.' % part
-        raise SystemError(msg)
+        raise SystemExit(msg)
     
     ctx.run('bumpversion --config-file bumpversion.cfg %s' % part)
