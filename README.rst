@@ -1,3 +1,7 @@
+.. warning::
+
+   This project is no longer maintained. For generating documents from templates, see `docxtpl <https://github.com/elapouya/python-docx-template>`_ or `Quarto <https://quarto.org>`_.
+
 Buroca
 ======
 
