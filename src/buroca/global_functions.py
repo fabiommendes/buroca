@@ -35,6 +35,25 @@ def cronogram(type, duration, start, month, tick_mark=None):
     return result
 
 
+@register
+def marked_option(options, value):
+    """
+    Receive a dictionary from values to option descriptions and a value.
+    It renders a list of option in which the option in the same key as "value"
+    is marked with an X.
+
+    Usage:
+        >>> bands = {'beatles': 'The Beatles', 'stones': 'The Rolling Stones'}
+        >>> marked_option(bands, 'stones')
+        ( ) The Beatles  (X) The Rolling Stones
+    """
+    data = []
+    for key, descr in options.items():
+        check = '(X)' if value == key else '( )'
+        data.append('%s %s' % (check, descr))
+    return '   '.join(data)
+
+
 def make_chronogram_table(slots, first_month=1, tick_mark='x'):
     """
     Make a cronogram table.

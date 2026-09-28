@@ -31,10 +31,10 @@ def save_rendered_for(template_path, dest, for_, type=None, base=None):
     namespace = db.load_for(for_, base=base)
 
     if ext in ['.ods', '.odt']:
-        raise NotImplementedError
+        template = load_ods_template(template_path)
     else:
         template = load_jinja_template(template_path)
-        save_rendered_template(template, namespace, dest, type=type)
+    save_rendered_template(template, namespace, dest, type=type)
 
 
 def save_rendered_all(template_path, dest=None, type=None, base=None):
@@ -58,13 +58,18 @@ def save_rendered_all(template_path, dest=None, type=None, base=None):
         dest = (lambda x: name_for(reports_path, x, type))
 
     if ext in ['.ods', '.odt']:
-        raise NotImplementedError
+        template = load_ods_template(template_path)
     else:
         template = load_jinja_template(template_path)
-        n_items = len(namespaces)
-        for idx, (name, namespace) in enumerate(namespaces.items(), 1):
-            print('(%s/%s) creating document for "%s".' % (idx, n_items, name))
-            save_rendered_template(template, namespace, dest(name), type=type)
+
+    n_items = len(namespaces)
+    for idx, (name, namespace) in enumerate(namespaces.items(), 1):
+        print('(%s/%s) creating document for "%s".' % (idx, n_items, name))
+        destination = dest(name)
+        try:
+            save_rendered_template(template, namespace, destination, type=type)
+        except jinja2.exceptions.UndefinedError as ex:
+            raise SystemExit('Variable not found: %s (%s)' % (ex, destination))
 
 
 def save_rendered_template(template, namespace, dest, type=None):
@@ -118,6 +123,9 @@ def _(template, namespace, dest):
         F.write(data)
 
 
+#
+# Template loader
+#
 def load_jinja_template(path):
     """
     Load template from path.
@@ -125,16 +133,26 @@ def load_jinja_template(path):
     template_path = Path(path)
     ext = os.path.splitext(template_path)[-1].lstrip('.')
     with template_path.open() as F:
-        jinja_template = as_template(F.read(), ext)
+        jinja_template = as_jinja2_template(F.read(), ext)
     jinja_template.path = template_path
     return jinja_template
 
 
-def as_template(data, type='text'):
+def load_ods_template(path):
+    """
+    Load open document (.ods or .odt) template.
+    """
+    # Import here to avoid circular import
+    from .loffice import load_open_document_template
+
+    return load_open_document_template(path)
+
+
+def as_jinja2_template(data, type='text'):
     """
     Return a Jinja2 template from the given template string.
     """
-    env = jinja2.Environment()
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters.update(FILTERS)
     env.globals.update(GLOBALS)
     return env.from_string(data)

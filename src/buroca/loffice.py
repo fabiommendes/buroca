@@ -5,7 +5,7 @@ from lazyutils import lazy
 from lxml.etree import XMLSyntaxError
 
 from .convert import _libreoffice_headless
-from .templates import as_template
+from .templates import as_jinja2_template
 
 
 class DocTemplate:
@@ -22,10 +22,6 @@ class DocTemplate:
 
     zipfile = lazy(lambda self: zipfile.ZipFile(self.path))
 
-    def xml_tree(self):
-        file = self.zipfile.open('content.xml')
-        return ET.parse(file)
-
     def __init__(self, path):
         self.is_closed = False
         self.path = path
@@ -33,6 +29,10 @@ class DocTemplate:
     def _check_open(self):
         if self.is_closed:
             raise RuntimeError('operation cannot be realized on closed file.')
+
+    def xml_tree(self):
+        file = self.zipfile.open('content.xml')
+        return ET.parse(file)
 
     def render_template(self, namespace):
         """
@@ -67,8 +67,6 @@ class DocTemplate:
             with zip.open('content.xml', 'w') as F:
                 F.write(data.encode('utf8'))
 
-        self.close()
-
     def close(self):
         """
         Close zipfile and flush all data to disk.
@@ -89,9 +87,10 @@ class CalcTemplate(DocTemplate):
         """
         self._check_open()
 
-        xml_root = self.xml_tree().getroot()
-        cells = xml_root.findall('table:cell')
-
+        xml_tree = self.xml_tree()
+        xml_root = xml_tree.getroot()
+        xmlns = xml_root.nsmap
+        cells = xml_root.findall('.//table:table-cell', xmlns)
         for cell in cells:
             cell[:] = render_node(cell, namespace)
         return ET.tounicode(xml_root)
@@ -124,11 +123,29 @@ def render_node(node, namespace):
     """
 
     data = ET.tounicode(node)
-    rendered = as_template(data).render(namespace)
+    data = data.replace('‘', "'").replace('’', "'")
+    rendered = as_jinja2_template(data).render(namespace)
     try:
-        return ET.fromstring(rendered)
+        result = ET.fromstring(rendered)
+        # print('data:', data)
+        # print('result:', result)
+        return result
     except XMLSyntaxError:
         raise ValueError('cannot create document from template!')
+
+
+def load_open_document_template(path, type=None):
+    """
+    Return a template object for a template in the given path.
+    """
+    if type is None:
+        type = str(path).rpartition('.')[-1]
+    if type == 'ods':
+        return CalcTemplate(path)
+    elif type == 'odt':
+        return DocTemplate(path)
+    else:
+        raise ValueError('invalid extension for document: %s' % path)
 
 
 def launch_calc(fname):

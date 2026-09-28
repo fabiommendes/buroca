@@ -1,7 +1,6 @@
 import pytest
 
 from buroca.cli import create
-from buroca.convert import convert_file
 from tests.conftest import simple_example, get_data
 
 path = simple_example
